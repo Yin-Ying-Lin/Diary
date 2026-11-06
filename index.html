@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF6EF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="小日記">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>小日記</title>
+<style>
+  :root{
+    --bg:#FBF6EF; --card:#FFFFFF; --ink:#3B3330; --soft:#8A7F78; --line:#EDE4DA;
+    --accent:#E07A5F; --accent-soft:#F8E3DB; --danger:#C8553D;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;}
+  body{overscroll-behavior-y:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+  input,textarea{font:inherit;color:inherit}
+  .hidden{display:none!important}
+
+  /* top bar */
+  .bar{position:sticky;top:0;z-index:5;background:rgba(251,246,239,.92);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    padding:calc(var(--safe-t) + 10px) 16px 10px;display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid transparent}
+  .bar h1{font-size:24px;margin:0;flex:1;letter-spacing:1px}
+  .bar .ttl{flex:1;font-size:16px;font-weight:600;text-align:center}
+  .icon-btn{width:40px;height:40px;border-radius:20px;display:grid;place-items:center;color:var(--accent)}
+  .icon-btn:active{background:var(--accent-soft)}
+  .icon-btn svg{width:22px;height:22px}
+  .txt-btn{color:var(--accent);font-size:16px;padding:8px 6px;min-width:52px}
+  .txt-btn.strong{font-weight:700}
+  .search{margin:0 16px 8px;display:flex;align-items:center;gap:8px;background:#F1E9DF;border-radius:12px;padding:8px 12px}
+  .search input{border:0;background:none;outline:none;flex:1;font-size:16px}
+
+  /* list */
+  #listWrap{padding:4px 16px calc(var(--safe-b) + 100px)}
+  .month{font-size:13px;color:var(--soft);margin:18px 4px 8px;font-weight:600;letter-spacing:.5px}
+  .card{display:flex;gap:12px;background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px;
+    box-shadow:0 1px 2px rgba(80,50,30,.05);width:100%;text-align:left;align-items:stretch}
+  .card:active{transform:scale(.99)}
+  .day{width:42px;flex:none;text-align:center;padding-top:2px}
+  .day b{display:block;font-size:24px;line-height:1.1;color:var(--accent)}
+  .day span{font-size:12px;color:var(--soft)}
+  .ex{flex:1;min-width:0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;
+    -webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+  .thumb{width:72px;height:72px;flex:none;border-radius:10px;overflow:hidden;position:relative;background:#eee;align-self:center}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb i{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;font-style:normal;
+    font-size:11px;padding:1px 6px;border-radius:8px}
+  .empty{text-align:center;color:var(--soft);margin-top:30vh;line-height:1.9;font-size:15px}
+
+  .fab{position:fixed;right:20px;bottom:calc(var(--safe-b) + 24px);width:60px;height:60px;border-radius:30px;
+    background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(224,122,95,.4);display:grid;place-items:center;z-index:6}
+  .fab svg{width:28px;height:28px}
+  .fab:active{transform:scale(.94)}
+
+  /* pages */
+  .page{position:fixed;inset:0;background:var(--bg);z-index:10;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    animation:up .22s ease-out}
+  @keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+
+  /* detail */
+  .d-body{padding:4px 22px calc(var(--safe-b) + 40px)}
+  .d-date{font-size:22px;font-weight:700;margin:8px 0 2px}
+  .d-week{color:var(--soft);font-size:14px;margin-bottom:16px}
+  .d-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-bottom:18px}
+  .d-photos.one{grid-template-columns:1fr}
+  .d-photos button{aspect-ratio:1;border-radius:10px;overflow:hidden;background:#eee}
+  .d-photos.one button{aspect-ratio:auto;max-height:60vh}
+  .d-photos img{width:100%;height:100%;object-fit:cover;display:block}
+  .d-text{font-size:17px;line-height:1.95;white-space:pre-wrap;word-break:break-word}
+  .d-actions{display:flex;gap:10px;margin-top:32px}
+  .btn{flex:1;padding:13px;border-radius:12px;background:var(--card);font-size:16px;text-align:center}
+  .btn.danger{color:var(--danger)}
+  .btn.primary{background:var(--accent);color:#fff;font-weight:600}
+
+  /* editor */
+  .e-body{padding:8px 18px calc(var(--safe-b) + 40px)}
+  .e-date{display:flex;align-items:center;gap:10px;margin:6px 0 14px;color:var(--soft);font-size:15px}
+  .e-date input{border:0;background:var(--card);border-radius:10px;padding:8px 12px;font-size:16px;color:var(--ink)}
+  .e-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+  .e-photos .ph{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#eee}
+  .e-photos img{width:100%;height:100%;object-fit:cover;display:block}
+  .e-photos .x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:12px;background:rgba(0,0,0,.6);
+    color:#fff;font-size:15px;line-height:24px;text-align:center}
+  .add-ph{aspect-ratio:1;border-radius:10px;border:1.5px dashed #D9CBBE;display:grid;place-items:center;color:var(--soft);
+    font-size:12px;text-align:center;line-height:1.5}
+  .add-ph svg{width:26px;height:26px;display:block;margin:0 auto 2px;color:var(--accent)}
+  .add-ph input{display:none}
+  textarea#eText{width:100%;min-height:50vh;border:0;outline:none;background:var(--card);border-radius:14px;padding:16px;
+    font-size:17px;line-height:1.9;resize:none}
+  .busy{color:var(--soft);font-size:13px;margin:-6px 0 10px}
+
+  /* viewer */
+  #viewer{position:fixed;inset:0;background:#000;z-index:30;display:flex;overflow-x:auto;scroll-snap-type:x mandatory}
+  #viewer div{flex:none;width:100vw;height:100%;scroll-snap-align:center;display:grid;place-items:center}
+  #viewer img{max-width:100%;max-height:100%;object-fit:contain}
+  #viewerClose{position:fixed;top:calc(var(--safe-t) + 12px);right:14px;z-index:31;width:40px;height:40px;border-radius:20px;
+    background:rgba(255,255,255,.2);color:#fff;font-size:22px}
+
+  /* sheet / dialog */
+  .scrim{position:fixed;inset:0;background:rgba(40,25,15,.35);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:var(--bg);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 18px calc(var(--safe-b) + 18px);
+    animation:up .2s ease-out}
+  .sheet h3{margin:4px 4px 14px;font-size:17px}
+  .sheet p{margin:0 4px 16px;color:var(--soft);font-size:14px;line-height:1.7}
+  .sheet .row{display:block;width:100%;text-align:left;background:var(--card);padding:14px 16px;border-radius:12px;margin-bottom:8px;font-size:16px}
+  .sheet .row small{display:block;color:var(--soft);font-size:13px;margin-top:2px}
+  .sheet .row input{display:none}
+  .sheet .btns{display:flex;gap:10px;margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 100px);transform:translateX(-50%);background:rgba(50,40,35,.92);color:#fff;
+    padding:10px 18px;border-radius:20px;font-size:14px;z-index:50;max-width:86vw;text-align:center}
+  @media (min-width:700px){#listWrap,.d-body,.e-body{max-width:680px;margin:0 auto}}
+</style>
+</head>
+<body>
+
+<!-- ===== List ===== -->
+<header class="bar" id="listBar">
+  <h1>小日記</h1>
+  <button class="icon-btn" id="btnSearch" aria-label="搜尋">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  </button>
+  <button class="icon-btn" id="btnMenu" aria-label="更多">
+    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+  </button>
+</header>
+<div class="search hidden" id="searchBox">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7F78" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <input id="q" type="search" placeholder="搜尋日記內容">
+</div>
+<main id="listWrap"></main>
+<button class="fab" id="btnNew" aria-label="寫日記">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ===== Detail ===== -->
+<section class="page hidden" id="detail">
+  <header class="bar">
+    <button class="icon-btn" data-back aria-label="返回">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>
+    </button>
+    <div class="ttl"></div>
+    <button class="txt-btn" id="btnEdit">編輯</button>
+  </header>
+  <div class="d-body">
+    <div class="d-date" id="dDate"></div>
+    <div class="d-week" id="dWeek"></div>
+    <div class="d-photos" id="dPhotos"></div>
+    <div class="d-text" id="dText"></div>
+    <div class="d-actions"><button class="btn danger" id="btnDelete">刪除這篇</button></div>
+  </div>
+</section>
+
+<!-- ===== Editor ===== -->
+<section class="page hidden" id="editor">
+  <header class="bar">
+    <button class="txt-btn" id="btnCancel">取消</button>
+    <div class="ttl" id="eTitle">寫日記</div>
+    <button class="txt-btn strong" id="btnSave">儲存</button>
+  </header>
+  <div class="e-body">
+    <label class="e-date">日期 <input type="date" id="eDate"></label>
+    <div class="e-photos" id="ePhotos"></div>
+    <div class="busy hidden" id="eBusy">照片處理中…</div>
+    <textarea id="eText" placeholder="今天發生了什麼事呢？"></textarea>
+  </div>
+</section>
+
+<!-- ===== Photo viewer ===== -->
+<div id="viewer" class="hidden"></div>
+<button id="viewerClose" class="hidden" aria-label="關閉">×</button>
+
+<!-- hidden inputs -->
+<input type="file" id="fileBackup" accept="application/json,.json" class="hidden">
+<input type="file" id="fileTxt" accept="text/plain,.txt" class="hidden">
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const WEEK = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+/* ---------- IndexedDB ---------- */
+let db;
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('little-diary', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('entries', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function store(mode){ return db.transaction('entries', mode).objectStore('entries'); }
+function req(r){ return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+const dbAll = () => req(store('readonly').getAll());
+const dbPut = e => req(store('readwrite').put(e));
+const dbDel = id => req(store('readwrite').delete(id));
+
+/* ---------- helpers ---------- */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+function parseD(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtLong(s){ const d = parseD(s); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`; }
+function esc(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+let toastT;
+function toast(msg){
+  let t = $('.toast'); if (!t){ t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.add('hidden'), 2400);
+}
+function sortEntries(a){ return a.sort((x, y) => (y.date.localeCompare(x.date)) || (y.created - x.created)); }
+
+/* object URLs, revoked when a view re-renders */
+const urlSets = {};
+function urlFor(group, blob){ const u = URL.createObjectURL(blob); (urlSets[group] ||= []).push(u); return u; }
+function freeUrls(group){ (urlSets[group] || []).forEach(u => URL.revokeObjectURL(u)); urlSets[group] = []; }
+
+/* ---------- dialog ---------- */
+function sheet(html, onMount){
+  const s = document.createElement('div');
+  s.className = 'scrim';
+  s.innerHTML = `<div class="sheet">${html}</div>`;
+  document.body.appendChild(s);
+  const close = () => s.remove();
+  s.addEventListener('click', e => { if (e.target === s) close(); });
+  onMount && onMount(s, close);
+  return close;
+}
+function ask(title, msg, okText = '確定', danger = false){
+  return new Promise(res => {
+    sheet(`<h3>${title}</h3>${msg ? `<p>${msg}</p>` : ''}
+      <div class="btns"><button class="btn" data-n>取消</button>
+      <button class="btn ${danger ? 'danger' : 'primary'}" data-y>${okText}</button></div>`,
+      (s, close) => {
+        s.querySelector('[data-n]').onclick = () => { close(); res(false); };
+        s.querySelector('[data-y]').onclick = () => { close(); res(true); };
+        s.addEventListener('click', e => { if (e.target === s) res(false); });
+      });
+  });
+}
+
+/* ---------- navigation (supports Android back) ---------- */
+const stack = [];
+function openPage(id){
+  $('#' + id).classList.remove('hidden');
+  $('#' + id).scrollTop = 0;
+  stack.push(id);
+  history.pushState({ p: id }, '');
+}
+function back(){ history.back(); }
+window.addEventListener('popstate', async () => {
+  const top = stack[stack.length - 1];
+  if (!top) return;
+  if (top === 'editor' && isDirty()){
+    history.pushState({ p: top }, '');
+    if (await ask('還沒儲存喔', '要放棄這次的修改嗎？', '放棄', true)){ dirtyOff(); back(); }
+    return;
+  }
+  stack.pop();
+  if (top === 'viewer'){ $('#viewer').classList.add('hidden'); $('#viewerClose').classList.add('hidden'); freeUrls('viewer'); }
+  else $('#' + top).classList.add('hidden');
+  if (top === 'editor') freeUrls('editor');
+});
+document.querySelectorAll('[data-back]').forEach(b => b.onclick = back);
+
+/* ---------- list ---------- */
+let entries = [];
+let query = '';
+function renderList(){
+  freeUrls('list');
+  const wrap = $('#listWrap');
+  const q = query.trim();
+  const list = q ? entries.filter(e => e.text.includes(q)) : entries;
+  if (!entries.length){
+    wrap.innerHTML = `<div class="empty">還沒有日記<br>點右下角 ＋ 寫下第一篇吧</div>`; return;
+  }
+  if (!list.length){ wrap.innerHTML = `<div class="empty">找不到「${esc(q)}」</div>`; return; }
+  let html = '', lastMonth = '';
+  list.forEach(e => {
+    const d = parseD(e.date);
+    const m = `${d.getFullYear()}年${d.getMonth()+1}月`;
+    if (m !== lastMonth){ html += `<div class="month">${m}</div>`; lastMonth = m; }
+    const first = e.photos[0];
+    html += `<button class="card" data-id="${e.id}">
+      <div class="day"><b>${d.getDate()}</b><span>週${WEEK[d.getDay()].slice(2)}</span></div>
+      <div class="ex">${esc(e.text.slice(0, 160)) || '<span style="color:#8A7F78">（只有照片）</span>'}</div>
+      ${first ? `<div class="thumb"><img loading="lazy" src="${urlFor('list', first.blob)}" alt="">${e.photos.length > 1 ? `<i>+${e.photos.length - 1}</i>` : ''}</div>` : ''}
+    </button>`;
+  });
+  wrap.innerHTML = html;
+}
+$('#listWrap').addEventListener('click', e => {
+  const c = e.target.closest('.card'); if (c) showDetail(c.dataset.id);
+});
+async function reload(){ entries = sortEntries(await dbAll()); renderList(); }
+
+$('#btnSearch').onclick = () => {
+  const box = $('#searchBox'); box.classList.toggle('hidden');
+  if (!box.classList.contains('hidden')) $('#q').focus(); else { query = ''; $('#q').value = ''; renderList(); }
+};
+$('#q').addEventListener('input', e => { query = e.target.value; renderList(); });
+
+/* ---------- detail ---------- */
+let current = null;
+function showDetail(id, push = true){
+  current = entries.find(e => e.id === id); if (!current) return;
+  freeUrls('detail');
+  const d = parseD(current.date);
+  $('#dDate').textContent = fmtLong(current.date);
+  $('#dWeek').textContent = WEEK[d.getDay()];
+  const ph = $('#dPhotos');
+  ph.className = 'd-photos' + (current.photos.length === 1 ? ' one' : '');
+  ph.innerHTML = current.photos.map((p, i) =>
+    `<button data-i="${i}"><img src="${urlFor('detail', p.blob)}" alt=""></button>`).join('');
+  $('#dText').textContent = current.text;
+  if (push) openPage('detail');
+}
+$('#dPhotos').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) openViewer(current.photos, +b.dataset.i);
+});
+$('#btnEdit').onclick = () => openEditor(current);
+$('#btnDelete').onclick = async () => {
+  if (!await ask('刪除這篇日記？', '刪除後就找不回來了喔。', '刪除', true)) return;
+  await dbDel(current.id); await reload(); back(); toast('已刪除');
+};
+
+/* ---------- viewer ---------- */
+function openViewer(photos, i){
+  freeUrls('viewer');
+  const v = $('#viewer');
+  v.innerHTML = photos.map(p => `<div><img src="${urlFor('viewer', p.blob)}" alt=""></div>`).join('');
+  v.classList.remove('hidden'); $('#viewerClose').classList.remove('hidden');
+  stack.push('viewer'); history.pushState({ p: 'viewer' }, '');
+  requestAnimationFrame(() => { v.scrollLeft = i * v.clientWidth; });
+}
+$('#viewerClose').onclick = back;
+$('#viewer').addEventListener('click', e => { if (e.target.tagName !== 'IMG') back(); });
+
+/* ---------- editor ---------- */
+let draft = null, snapshot = '';
+const sig = () => draft ? JSON.stringify([draft.date, $('#eText').value, draft.photos.map(p => p.id)]) : '';
+const isDirty = () => draft && sig() !== snapshot;
+const dirtyOff = () => { snapshot = sig(); };
+
+function openEditor(entry){
+  freeUrls('editor');
+  draft = entry
+    ? { id: entry.id, created: entry.created, date: entry.date, photos: entry.photos.slice() }
+    : { id: uid(), created: Date.now(), date: todayStr(), photos: [] };
+  $('#eTitle').textContent = entry ? '編輯日記' : '寫日記';
+  $('#eDate').value = draft.date;
+  $('#eText').value = entry ? entry.text : '';
+  renderEditorPhotos();
+  dirtyOff();
+  openPage('editor');
+  autoGrow();
+}
+function renderEditorPhotos(){
+  freeUrls('editor');
+  $('#ePhotos').innerHTML = draft.photos.map((p, i) =>
+    `<div class="ph"><img src="${urlFor('editor', p.blob)}" alt=""><button class="x" data-i="${i}" aria-label="移除">×</button></div>`).join('')
+    + `<label class="add-ph"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>加照片</span>
+       <input type="file" accept="image/*" multiple id="ePick"></label>`;
+  $('#ePick').addEventListener('change', onPick);
+}
+$('#ePhotos').addEventListener('click', e => {
+  const x = e.target.closest('.x'); if (!x) return;
+  draft.photos.splice(+x.dataset.i, 1); renderEditorPhotos();
+});
+async function onPick(e){
+  const files = [...e.target.files]; if (!files.length) return;
+  $('#eBusy').classList.remove('hidden');
+  for (const f of files){
+    try { draft.photos.push({ id: uid(), blob: await compress(f) }); }
+    catch { toast('有一張照片讀不進來'); }
+  }
+  $('#eBusy').classList.add('hidden');
+  renderEditorPhotos();
+}
+function compress(file, max = 1600, q = 0.85){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+    img.src = url;
+  });
+}
+$('#eDate').addEventListener('change', e => { if (e.target.value) draft.date = e.target.value; });
+function autoGrow(){ const t = $('#eText'); t.style.height = 'auto'; t.style.height = Math.max(t.scrollHeight, innerHeight * .5) + 'px'; }
+$('#eText').addEventListener('input', autoGrow);
+
+$('#btnCancel').onclick = back;
+$('#btnSave').onclick = async () => {
+  const text = $('#eText').value.replace(/\s+$/, '');
+  if (!text && !draft.photos.length){ toast('寫點什麼或加張照片吧'); return; }
+  const entry = { id: draft.id, date: draft.date || todayStr(), text, photos: draft.photos, created: draft.created, updated: Date.now() };
+  try { await dbPut(entry); } catch { toast('儲存失敗，手機空間可能不足'); return; }
+  dirtyOff();
+  await reload();
+  const under = stack[stack.length - 2];
+  back();
+  if (under === 'detail') showDetail(entry.id, false);
+  toast('已儲存');
+};
+
+$('#btnNew').onclick = () => openEditor(null);
+
+/* ---------- menu: backup / import ---------- */
+$('#btnMenu').onclick = () => {
+  const n = entries.length, p = entries.reduce((a, e) => a + e.photos.length, 0);
+  sheet(`<h3>小日記</h3><p>目前共 ${n} 篇、${p} 張照片。資料只存在這支手機裡，記得偶爾備份喔。</p>
+    <button class="row" data-a="export">備份全部日記<small>產生一個檔案，可存到「檔案」或 iCloud Drive</small></button>
+    <button class="row" data-a="restore">從備份還原<small>選擇之前備份的 .json 檔</small></button>
+    <button class="row" data-a="txt">從備忘錄匯入<small>匯入捷徑產生的 .txt 檔，或直接貼上一篇</small></button>`,
+    (s, close) => s.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { close(); menuAction(b.dataset.a); }));
+};
+function menuAction(a){
+  if (a === 'export') exportAll();
+  if (a === 'restore') $('#fileBackup').click();
+  if (a === 'txt') importSheet();
+}
+
+const blobToDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+async function exportAll(){
+  if (!entries.length){ toast('還沒有日記可以備份'); return; }
+  toast('正在打包…');
+  const out = [];
+  for (const e of entries){
+    out.push({ ...e, photos: await Promise.all(e.photos.map(async p => ({ id: p.id, data: await blobToDataURL(p.blob) }))) });
+  }
+  const json = JSON.stringify({ app: 'little-diary', version: 1, exported: new Date().toISOString(), entries: out });
+  const name = `小日記備份-${todayStr()}.json`;
+  const file = new File([json], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: name }); return;
+    }
+  } catch (err) { if (err && err.name === 'AbortError') return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+
+$('#fileBackup').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!data.entries) throw 0;
+    let n = 0;
+    for (const x of data.entries){
+      const photos = await Promise.all((x.photos || []).map(async p => ({ id: p.id || uid(), blob: await (await fetch(p.data)).blob() })));
+      await dbPut({ id: x.id || uid(), date: x.date, text: x.text || '', photos, created: x.created || Date.now(), updated: x.updated || Date.now() });
+      n++;
+    }
+    await reload(); toast(`已還原 ${n} 篇日記`);
+  } catch { toast('這個檔案看起來不是小日記的備份'); }
+});
+
+/* ---------- import from Notes ---------- */
+function importSheet(){
+  sheet(`<h3>從備忘錄匯入</h3>
+    <p>貼上一篇備忘錄的內容，或選擇捷徑產生的 .txt 檔（每篇以「===== 2026-10-05」這種行開頭）。</p>
+    <label class="e-date" style="margin:0 4px 10px">日期 <input type="date" id="impDate" value="${todayStr()}"></label>
+    <textarea id="impText" style="width:100%;height:28vh;border:0;border-radius:12px;padding:12px;font-size:16px;line-height:1.7;outline:none" placeholder="在這裡貼上"></textarea>
+    <div class="btns"><button class="btn" data-f>選 .txt 檔</button><button class="btn primary" data-ok>匯入</button></div>`,
+    (s, close) => {
+      s.querySelector('[data-f]').onclick = () => { close(); $('#fileTxt').click(); };
+      s.querySelector('[data-ok]').onclick = async () => {
+        const raw = s.querySelector('#impText').value;
+        if (!raw.trim()){ toast('還沒貼上內容'); return; }
+        const parsed = parseNotes(raw);
+        const list = parsed.length ? parsed : [{ date: s.querySelector('#impDate').value || todayStr(), text: raw.trim() }];
+        close(); await saveImported(list);
+      };
+    });
+}
+$('#fileTxt').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const list = parseNotes(await f.text());
+  if (!list.length){ toast('檔案裡找不到「===== 日期」分隔行'); return; }
+  await saveImported(list);
+});
+function normDate(s){
+  const m = s.match(/(\d{4})\D{1,2}(\d{1,2})\D{1,2}(\d{1,2})/);
+  return m ? `${m[1]}-${pad(m[2])}-${pad(m[3])}` : null;
+}
+function parseNotes(raw){
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n');
+  const out = []; let cur = null;
+  for (const line of lines){
+    const h = line.match(/^\s*={3,}\s*(.+?)\s*=*\s*$/);
+    const d = h && normDate(h[1]);
+    if (d){ if (cur) out.push(cur); cur = { date: d, text: '' }; continue; }
+    if (cur) cur.text += line + '\n';
+  }
+  if (cur) out.push(cur);
+  return out.map(x => ({ ...x, text: x.text.trim() })).filter(x => x.text);
+}
+async function saveImported(list){
+  const seen = new Set(entries.map(e => e.date + '|' + e.text));
+  let n = 0, skip = 0;
+  for (const x of list){
+    if (seen.has(x.date + '|' + x.text)){ skip++; continue; }
+    await dbPut({ id: uid(), date: x.date, text: x.text, photos: [], created: Date.now() + n, updated: Date.now() });
+    seen.add(x.date + '|' + x.text); n++;
+  }
+  await reload();
+  toast(`匯入 ${n} 篇` + (skip ? `，略過重複的 ${skip} 篇` : ''));
+}
+
+/* ---------- start ---------- */
+(async () => {
+  try { db = await openDB(); }
+  catch { $('#listWrap').innerHTML = '<div class="empty">這個瀏覽器無法儲存資料<br>請用 Safari 或 Chrome 開啟</div>'; return; }
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+  await reload();
+})();
+if ('serviceWorker' in navigator){
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+})();
+</script>
+</body>
+</html>
