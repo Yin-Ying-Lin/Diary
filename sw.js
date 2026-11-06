@@ -1,6 +1,6 @@
 // 小日記 service worker: keeps the app working offline.
 // Diary entries live in IndexedDB, not here. This only caches the app files.
-const CACHE = 'little-diary-v1';
+const CACHE = 'little-diary-v2';
 const ASSETS = [
   './',
   './index.html',
